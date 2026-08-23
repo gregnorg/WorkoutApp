@@ -46,12 +46,14 @@ struct WorkoutListView: View {
             }
             .navigationTitle("GymForge")
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button { showingHistory = true } label: {
-                        Image(systemName: "clock.arrow.circlepath")
+                        Text("Workout History")
                     }
                     .accessibilityLabel("Workout history")
+                }
 
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(isEditing ? "Done" : "Edit") {
                         withAnimation(.snappy) { isEditing.toggle() }
                     }
