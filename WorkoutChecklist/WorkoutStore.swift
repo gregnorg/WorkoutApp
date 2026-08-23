@@ -19,11 +19,12 @@ final class WorkoutStore: ObservableObject {
 
     func addWorkout() -> UUID {
         let tintNames = ["orange", "blue", "purple", "green"]
+        let nextIndex = nextAvailableWorkoutIndex()
         let workout = Workout(
-            name: "Workout \(Self.letterLabel(for: workouts.count))",
+            name: "Workout \(Self.letterLabel(for: nextIndex))",
             focus: "",
             symbol: "dumbbell.fill",
-            tintName: tintNames[workouts.count % tintNames.count],
+            tintName: tintNames[nextIndex % tintNames.count],
             exercises: []
         )
         workouts.append(workout)
@@ -34,7 +35,11 @@ final class WorkoutStore: ObservableObject {
         for offset in offsets.sorted(by: >) {
             workouts.remove(at: offset)
         }
-        normalizeWorkoutNames()
+    }
+
+    func renameWorkout(_ workoutID: UUID, to name: String) {
+        guard let index = index(of: workoutID) else { return }
+        workouts[index].name = name
     }
 
     func addExercise(to workoutID: UUID, name: String, sets: Int, reps: Int, weight: Double) {
@@ -46,6 +51,29 @@ final class WorkoutStore: ObservableObject {
             weight: weight
         )
         workouts[index].exercises.append(exercise)
+    }
+
+    func updateExercise(
+        _ exerciseID: UUID,
+        in workoutID: UUID,
+        name: String,
+        sets: Int,
+        reps: Int,
+        weight: Double
+    ) {
+        guard let workoutIndex = index(of: workoutID),
+              let exerciseIndex = workouts[workoutIndex].exercises.firstIndex(where: { $0.id == exerciseID })
+        else { return }
+
+        workouts[workoutIndex].exercises[exerciseIndex].name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        workouts[workoutIndex].exercises[exerciseIndex].sets = sets
+        workouts[workoutIndex].exercises[exerciseIndex].reps = reps
+        workouts[workoutIndex].exercises[exerciseIndex].weight = weight
+        workouts[workoutIndex].exercises[exerciseIndex].completedSets = workouts[workoutIndex]
+            .exercises[exerciseIndex]
+            .completedSets
+            .filter { $0 < sets }
+        updateCompletionDate(forWorkoutAt: workoutIndex)
     }
 
     func deleteExercises(at offsets: IndexSet, from workoutID: UUID) {
@@ -67,11 +95,7 @@ final class WorkoutStore: ObservableObject {
         } else {
             workouts[workoutIndex].exercises[exerciseIndex].completedSets.insert(setIndex)
         }
-        if workouts[workoutIndex].isComplete {
-            workouts[workoutIndex].lastCompletedAt = .now
-        } else {
-            workouts[workoutIndex].lastCompletedAt = nil
-        }
+        updateCompletionDate(forWorkoutAt: workoutIndex)
     }
 
     func reset(_ workoutID: UUID) {
@@ -86,6 +110,14 @@ final class WorkoutStore: ObservableObject {
         workouts.firstIndex(where: { $0.id == workoutID })
     }
 
+    private func updateCompletionDate(forWorkoutAt index: Int) {
+        if workouts[index].isComplete {
+            workouts[index].lastCompletedAt = .now
+        } else {
+            workouts[index].lastCompletedAt = nil
+        }
+    }
+
     private func load() {
         guard let data = try? Data(contentsOf: saveURL),
               let decoded = try? JSONDecoder().decode([Workout].self, from: data)
@@ -94,7 +126,6 @@ final class WorkoutStore: ObservableObject {
             return
         }
         workouts = decoded
-        normalizeWorkoutNames()
     }
 
     private func save() {
@@ -102,10 +133,13 @@ final class WorkoutStore: ObservableObject {
         try? data.write(to: saveURL, options: .atomic)
     }
 
-    private func normalizeWorkoutNames() {
-        for index in workouts.indices {
-            workouts[index].name = "Workout \(Self.letterLabel(for: index))"
+    private func nextAvailableWorkoutIndex() -> Int {
+        let names = Set(workouts.map(\.name))
+        var index = workouts.count
+        while names.contains("Workout \(Self.letterLabel(for: index))") {
+            index += 1
         }
+        return index
     }
 
     private static func letterLabel(for index: Int) -> String {

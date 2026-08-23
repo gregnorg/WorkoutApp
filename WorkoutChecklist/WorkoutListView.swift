@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WorkoutListView: View {
     @EnvironmentObject private var store: WorkoutStore
+    @State private var isEditing = false
 
     var body: some View {
         NavigationStack {
@@ -21,23 +22,21 @@ struct WorkoutListView: View {
                     }
                 } else {
                     List {
-                        Section {
-                            WeeklySummaryCard(workouts: store.workouts)
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .padding(.vertical, 4)
-                        }
-
                         Section("Your routines") {
                             ForEach(store.workouts) { workout in
-                                NavigationLink(value: workout.id) {
-                                    WorkoutRow(workout: workout)
+                                if isEditing {
+                                    WorkoutEditRow(workout: workout) { name in
+                                        store.renameWorkout(workout.id, to: name)
+                                    }
+                                } else {
+                                    NavigationLink(value: workout.id) {
+                                        WorkoutRow(workout: workout)
+                                    }
                                 }
-                                .listRowBackground(AppTheme.card)
-                                .listRowSeparator(.hidden)
                             }
                             .onDelete(perform: store.deleteWorkouts)
+                            .listRowBackground(AppTheme.card)
+                            .listRowSeparator(.hidden)
                         }
                     }
                     .listStyle(.insetGrouped)
@@ -46,7 +45,12 @@ struct WorkoutListView: View {
             }
             .navigationTitle("GymForge")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button(isEditing ? "Done" : "Edit") {
+                        withAnimation(.snappy) { isEditing.toggle() }
+                    }
+                    .disabled(store.workouts.isEmpty)
+
                     Button {
                         withAnimation(.snappy) { _ = store.addWorkout() }
                     } label: {
@@ -58,48 +62,8 @@ struct WorkoutListView: View {
             .navigationDestination(for: UUID.self) { workoutID in
                 WorkoutDetailView(workoutID: workoutID)
             }
+            .environment(\.editMode, .constant(isEditing ? .active : .inactive))
         }
-    }
-}
-
-private struct WeeklySummaryCard: View {
-    let workouts: [Workout]
-
-    private var completed: Int { workouts.filter(\.isComplete).count }
-
-    var body: some View {
-        HStack(spacing: 18) {
-            ZStack {
-                Circle()
-                    .stroke(.white.opacity(0.22), lineWidth: 7)
-                Circle()
-                    .trim(from: 0, to: workouts.isEmpty ? 0 : Double(completed) / Double(workouts.count))
-                    .stroke(.white, style: StrokeStyle(lineWidth: 7, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Text("\(completed)/\(workouts.count)")
-                    .font(.headline.monospacedDigit())
-            }
-            .frame(width: 66, height: 66)
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(completed == workouts.count ? "You crushed it" : "Ready when you are")
-                    .font(.title3.bold())
-                Text("Complete your routines and keep the momentum going.")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.82))
-            }
-        }
-        .foregroundStyle(.white)
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            LinearGradient(
-                colors: [AppTheme.accent, Color(red: 0.98, green: 0.48, blue: 0.20)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
-        )
     }
 }
 
@@ -117,10 +81,6 @@ private struct WorkoutRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(workout.name)
                     .font(.headline)
-                Text(workout.focus.isEmpty ? "Custom workout" : workout.focus)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
                 ProgressView(value: workout.progress)
                     .tint(workout.tint)
             }
@@ -128,6 +88,29 @@ private struct WorkoutRow: View {
             Text("\(workout.completedCount)/\(workout.exercises.count)")
                 .font(.caption.bold().monospacedDigit())
                 .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 7)
+    }
+}
+
+private struct WorkoutEditRow: View {
+    let workout: Workout
+    let rename: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: workout.symbol)
+                .font(.title3)
+                .foregroundStyle(workout.tint)
+                .frame(width: 44, height: 44)
+                .background(workout.tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+
+            TextField(
+                "Workout name",
+                text: Binding(get: { workout.name }, set: rename)
+            )
+            .font(.headline)
+            .textInputAutocapitalization(.words)
         }
         .padding(.vertical, 7)
     }

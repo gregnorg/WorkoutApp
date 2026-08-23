@@ -4,6 +4,7 @@ struct WorkoutDetailView: View {
     @EnvironmentObject private var store: WorkoutStore
     let workoutID: UUID
     @State private var showingNewExercise = false
+    @State private var editingExercise: Exercise?
     @State private var showingResetConfirmation = false
     @State private var isEditing = false
 
@@ -32,11 +33,17 @@ struct WorkoutDetailView: View {
                             }
                         } else {
                             ForEach(workout.exercises) { exercise in
-                                ExerciseRow(exercise: exercise, tint: workout.tint, isEditing: isEditing) { setIndex in
-                                    withAnimation(.snappy) {
-                                        store.toggleSet(setIndex, for: exercise.id, in: workoutID)
+                                ExerciseRow(
+                                    exercise: exercise,
+                                    tint: workout.tint,
+                                    isEditing: isEditing,
+                                    editExercise: { editingExercise = exercise },
+                                    toggleSet: { setIndex in
+                                        withAnimation(.snappy) {
+                                            store.toggleSet(setIndex, for: exercise.id, in: workoutID)
+                                        }
                                     }
-                                }
+                                )
                             }
                             .onDelete { store.deleteExercises(at: $0, from: workoutID) }
                             .deleteDisabled(!isEditing)
@@ -74,6 +81,9 @@ struct WorkoutDetailView: View {
                 .sheet(isPresented: $showingNewExercise) {
                     NewExerciseView(workoutID: workoutID)
                 }
+                .sheet(item: $editingExercise) { exercise in
+                    NewExerciseView(workoutID: workoutID, exercise: exercise)
+                }
                 .environment(\.editMode, .constant(isEditing ? .active : .inactive))
             } else {
                 ContentUnavailableView("Workout not found", systemImage: "exclamationmark.triangle")
@@ -109,6 +119,7 @@ private struct ExerciseRow: View {
     let exercise: Exercise
     let tint: Color
     let isEditing: Bool
+    let editExercise: () -> Void
     let toggleSet: (Int) -> Void
 
     var body: some View {
@@ -150,6 +161,15 @@ private struct ExerciseRow: View {
                         }
                     }
                 }
+            }
+
+            if isEditing {
+                Button(action: editExercise) {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.title2)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Edit \(exercise.name)")
             }
         }
         .padding(.vertical, 5)

@@ -4,10 +4,20 @@ struct NewExerciseView: View {
     @EnvironmentObject private var store: WorkoutStore
     @Environment(\.dismiss) private var dismiss
     let workoutID: UUID
-    @State private var name = ""
-    @State private var sets = 3
-    @State private var reps = 10
-    @State private var weight = 0.0
+    private let exerciseID: UUID?
+    @State private var name: String
+    @State private var sets: Int
+    @State private var reps: Int
+    @State private var weight: Double
+
+    init(workoutID: UUID, exercise: Exercise? = nil) {
+        self.workoutID = workoutID
+        exerciseID = exercise?.id
+        _name = State(initialValue: exercise?.name ?? "")
+        _sets = State(initialValue: exercise?.sets ?? 3)
+        _reps = State(initialValue: exercise?.reps ?? 10)
+        _weight = State(initialValue: exercise?.weight ?? 0)
+    }
 
     var body: some View {
         NavigationStack {
@@ -37,21 +47,32 @@ struct NewExerciseView: View {
                     Text("Use 0 lb for bodyweight exercises.")
                 }
             }
-            .navigationTitle("Add Exercise")
+            .navigationTitle(exerciseID == nil ? "Add Exercise" : "Edit Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        store.addExercise(
-                            to: workoutID,
-                            name: name,
-                            sets: sets,
-                            reps: reps,
-                            weight: max(0, weight)
-                        )
+                    Button(exerciseID == nil ? "Add" : "Save") {
+                        if let exerciseID {
+                            store.updateExercise(
+                                exerciseID,
+                                in: workoutID,
+                                name: name,
+                                sets: sets,
+                                reps: reps,
+                                weight: max(0, weight)
+                            )
+                        } else {
+                            store.addExercise(
+                                to: workoutID,
+                                name: name,
+                                sets: sets,
+                                reps: reps,
+                                weight: max(0, weight)
+                            )
+                        }
                         dismiss()
                     }
                     .fontWeight(.semibold)
