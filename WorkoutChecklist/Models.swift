@@ -2,10 +2,74 @@ import Foundation
 import SwiftUI
 
 struct Exercise: Identifiable, Codable, Hashable {
-    var id = UUID()
+    var id: UUID
     var name: String
-    var details: String
-    var isComplete = false
+    var sets: Int
+    var reps: Int
+    var weight: Double
+    var completedSets: Set<Int>
+
+    var weightLabel: String {
+        weight > 0
+            ? "\(weight.formatted(.number.precision(.fractionLength(0...1)))) lb"
+            : "Bodyweight"
+    }
+
+    var isComplete: Bool {
+        sets > 0 && completedSets.count == sets
+    }
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        sets: Int,
+        reps: Int,
+        weight: Double,
+        completedSets: Set<Int> = []
+    ) {
+        self.id = id
+        self.name = name
+        self.sets = sets
+        self.reps = reps
+        self.weight = weight
+        self.completedSets = completedSets
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, sets, reps, weight, completedSets, isComplete, details
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try container.decode(String.self, forKey: .name)
+        let legacyDetails = try container.decodeIfPresent(String.self, forKey: .details) ?? ""
+        let legacyNumbers = legacyDetails
+            .split(whereSeparator: { !$0.isNumber })
+            .compactMap { Int($0) }
+        sets = try container.decodeIfPresent(Int.self, forKey: .sets) ?? legacyNumbers.first ?? 3
+        reps = try container.decodeIfPresent(Int.self, forKey: .reps) ?? legacyNumbers.dropFirst().first ?? 10
+        weight = try container.decodeIfPresent(Double.self, forKey: .weight) ?? 0
+
+        if let decodedSets = try container.decodeIfPresent(Set<Int>.self, forKey: .completedSets) {
+            let setCount = sets
+            completedSets = decodedSets.filter { $0 >= 0 && $0 < setCount }
+        } else if try container.decodeIfPresent(Bool.self, forKey: .isComplete) == true {
+            completedSets = Set(0..<sets)
+        } else {
+            completedSets = []
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(sets, forKey: .sets)
+        try container.encode(reps, forKey: .reps)
+        try container.encode(weight, forKey: .weight)
+        try container.encode(completedSets, forKey: .completedSets)
+    }
 }
 
 struct Workout: Identifiable, Codable, Hashable {
@@ -50,29 +114,28 @@ enum AppTheme {
 extension Workout {
     static let samples: [Workout] = [
         Workout(
-            name: "Push Day",
+            name: "Workout A",
             focus: "Chest, shoulders & triceps",
             symbol: "figure.strengthtraining.traditional",
             tintName: "orange",
             exercises: [
-                Exercise(name: "Bench press", details: "4 sets × 8 reps"),
-                Exercise(name: "Incline dumbbell press", details: "3 sets × 10 reps"),
-                Exercise(name: "Shoulder press", details: "3 sets × 10 reps"),
-                Exercise(name: "Tricep pushdown", details: "3 sets × 12 reps")
+                Exercise(name: "Bench press", sets: 4, reps: 8, weight: 135),
+                Exercise(name: "Incline dumbbell press", sets: 3, reps: 10, weight: 40),
+                Exercise(name: "Shoulder press", sets: 3, reps: 10, weight: 30),
+                Exercise(name: "Tricep pushdown", sets: 3, reps: 12, weight: 50)
             ]
         ),
         Workout(
-            name: "Leg Day",
+            name: "Workout B",
             focus: "Quads, hamstrings & glutes",
             symbol: "figure.run",
             tintName: "blue",
             exercises: [
-                Exercise(name: "Back squat", details: "4 sets × 6 reps"),
-                Exercise(name: "Romanian deadlift", details: "3 sets × 8 reps"),
-                Exercise(name: "Walking lunges", details: "3 sets × 10 each"),
-                Exercise(name: "Calf raises", details: "3 sets × 15 reps")
+                Exercise(name: "Back squat", sets: 4, reps: 6, weight: 185),
+                Exercise(name: "Romanian deadlift", sets: 3, reps: 8, weight: 135),
+                Exercise(name: "Walking lunges", sets: 3, reps: 10, weight: 25),
+                Exercise(name: "Calf raises", sets: 3, reps: 15, weight: 45)
             ]
         )
     ]
 }
-

@@ -1,11 +1,11 @@
-# Trainlist
+# GymForge
 
 A small, local-first iPhone workout checklist built with SwiftUI.
 
 ## What it does
 
-- Create color-coded workout routines
-- Add exercises with sets and reps
+- Create sequential Workout A, B, C routines with one tap
+- Add exercises with sets, reps, and weight
 - Check off exercises during a workout
 - View progress for each routine
 - Reset a routine for the next session
@@ -18,4 +18,3 @@ A small, local-first iPhone workout checklist built with SwiftUI.
 3. Select an iPhone simulator and press **Run** (`⌘R`).
 
 To run on a physical iPhone, select your Apple Developer team under **Signing & Capabilities**, change the bundle identifier if Xcode asks, connect the phone, and choose it as the run destination.
-

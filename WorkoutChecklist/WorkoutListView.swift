@@ -2,7 +2,6 @@ import SwiftUI
 
 struct WorkoutListView: View {
     @EnvironmentObject private var store: WorkoutStore
-    @State private var showingNewWorkout = false
 
     var body: some View {
         NavigationStack {
@@ -15,7 +14,9 @@ struct WorkoutListView: View {
                     } description: {
                         Text("Build your first checklist and make it your own.")
                     } actions: {
-                        Button("Create a workout") { showingNewWorkout = true }
+                        Button("Create Workout A") {
+                            withAnimation(.snappy) { _ = store.addWorkout() }
+                        }
                             .buttonStyle(.borderedProminent)
                     }
                 } else {
@@ -43,20 +44,19 @@ struct WorkoutListView: View {
                     .scrollContentBackground(.hidden)
                 }
             }
-            .navigationTitle("Trainlist")
+            .navigationTitle("GymForge")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingNewWorkout = true } label: {
+                    Button {
+                        withAnimation(.snappy) { _ = store.addWorkout() }
+                    } label: {
                         Image(systemName: "plus")
                     }
-                    .accessibilityLabel("New workout")
+                    .accessibilityLabel("Add next workout")
                 }
             }
             .navigationDestination(for: UUID.self) { workoutID in
                 WorkoutDetailView(workoutID: workoutID)
-            }
-            .sheet(isPresented: $showingNewWorkout) {
-                NewWorkoutView()
             }
         }
     }
@@ -137,4 +137,3 @@ private struct WorkoutRow: View {
     WorkoutListView()
         .environmentObject(WorkoutStore())
 }
-

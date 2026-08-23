@@ -5,6 +5,7 @@ struct WorkoutDetailView: View {
     let workoutID: UUID
     @State private var showingNewExercise = false
     @State private var showingResetConfirmation = false
+    @State private var isEditing = false
 
     private var workout: Workout? {
         store.workouts.first(where: { $0.id == workoutID })
@@ -24,18 +25,27 @@ struct WorkoutDetailView: View {
 
                     Section("Exercises") {
                         if workout.exercises.isEmpty {
-                            Button { showingNewExercise = true } label: {
-                                Label("Add your first exercise", systemImage: "plus.circle.fill")
+                            ContentUnavailableView {
+                                Label("No exercises", systemImage: "dumbbell")
+                            } description: {
+                                Text(isEditing ? "Add the first exercise to this workout." : "Tap Edit to build this workout.")
                             }
                         } else {
                             ForEach(workout.exercises) { exercise in
-                                ExerciseRow(exercise: exercise, tint: workout.tint) {
+                                ExerciseRow(exercise: exercise, tint: workout.tint, isEditing: isEditing) { setIndex in
                                     withAnimation(.snappy) {
-                                        store.toggleExercise(exercise.id, in: workoutID)
+                                        store.toggleSet(setIndex, for: exercise.id, in: workoutID)
                                     }
                                 }
                             }
                             .onDelete { store.deleteExercises(at: $0, from: workoutID) }
+                            .deleteDisabled(!isEditing)
+                        }
+
+                        if isEditing {
+                            Button { showingNewExercise = true } label: {
+                                Label("Add Exercise", systemImage: "plus.circle.fill")
+                            }
                         }
                     }
                 }
@@ -51,10 +61,9 @@ struct WorkoutDetailView: View {
                         .disabled(workout.completedCount == 0)
                         .accessibilityLabel("Reset workout")
 
-                        Button { showingNewExercise = true } label: {
-                            Image(systemName: "plus")
+                        Button(isEditing ? "Done" : "Edit") {
+                            withAnimation(.snappy) { isEditing.toggle() }
                         }
-                        .accessibilityLabel("Add exercise")
                     }
                 }
                 .confirmationDialog("Reset this workout?", isPresented: $showingResetConfirmation) {
@@ -65,6 +74,7 @@ struct WorkoutDetailView: View {
                 .sheet(isPresented: $showingNewExercise) {
                     NewExerciseView(workoutID: workoutID)
                 }
+                .environment(\.editMode, .constant(isEditing ? .active : .inactive))
             } else {
                 ContentUnavailableView("Workout not found", systemImage: "exclamationmark.triangle")
             }
@@ -98,34 +108,50 @@ struct WorkoutDetailView: View {
 private struct ExerciseRow: View {
     let exercise: Exercise
     let tint: Color
-    let action: () -> Void
+    let isEditing: Bool
+    let toggleSet: (Int) -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                Image(systemName: exercise.isComplete ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundStyle(exercise.isComplete ? tint : Color.secondary)
-                    .contentTransition(.symbolEffect(.replace))
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(exercise.name)
+                    .font(.body.weight(.semibold))
+                    .strikethrough(exercise.isComplete, color: .secondary)
+                    .lineLimit(2)
+                Text(exercise.weightLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 120, alignment: .leading)
+            .layoutPriority(1)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(exercise.name)
-                        .font(.body.weight(.semibold))
-                        .strikethrough(exercise.isComplete, color: .secondary)
-                    if !exercise.details.isEmpty {
-                        Text(exercise.details)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(0..<exercise.sets, id: \.self) { setIndex in
+                        let isSetComplete = exercise.completedSets.contains(setIndex)
+                        VStack(spacing: 4) {
+                            Text("\(exercise.reps)")
+                                .font(.caption.bold().monospacedDigit())
+                                .foregroundStyle(.secondary)
+
+                            Button {
+                                guard !isEditing else { return }
+                                toggleSet(setIndex)
+                            } label: {
+                                Image(systemName: isSetComplete ? "checkmark.circle.fill" : "circle")
+                                    .font(.title2)
+                                    .foregroundStyle(isSetComplete ? tint : Color.secondary)
+                                    .contentTransition(.symbolEffect(.replace))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isEditing)
+                            .accessibilityLabel("Set \(setIndex + 1), \(exercise.reps) reps, \(isSetComplete ? "complete" : "incomplete")")
+                            .accessibilityHint("Double tap to toggle this set")
+                        }
                     }
                 }
-                Spacer()
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .padding(.vertical, 5)
-        .accessibilityLabel("\(exercise.name), \(exercise.isComplete ? "complete" : "incomplete")")
-        .accessibilityHint("Double tap to toggle")
     }
 }
-

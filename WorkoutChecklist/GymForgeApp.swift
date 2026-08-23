@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct WorkoutChecklistApp: App {
+struct GymForgeApp: App {
     @StateObject private var store = WorkoutStore()
 
     var body: some Scene {
@@ -12,4 +12,3 @@ struct WorkoutChecklistApp: App {
         }
     }
 }
-

@@ -17,12 +17,13 @@ final class WorkoutStore: ObservableObject {
         isLoading = false
     }
 
-    func addWorkout(name: String, focus: String, tintName: String) -> UUID {
+    func addWorkout() -> UUID {
+        let tintNames = ["orange", "blue", "purple", "green"]
         let workout = Workout(
-            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            focus: focus.trimmingCharacters(in: .whitespacesAndNewlines),
+            name: "Workout \(Self.letterLabel(for: workouts.count))",
+            focus: "",
             symbol: "dumbbell.fill",
-            tintName: tintName,
+            tintName: tintNames[workouts.count % tintNames.count],
             exercises: []
         )
         workouts.append(workout)
@@ -33,13 +34,16 @@ final class WorkoutStore: ObservableObject {
         for offset in offsets.sorted(by: >) {
             workouts.remove(at: offset)
         }
+        normalizeWorkoutNames()
     }
 
-    func addExercise(to workoutID: UUID, name: String, details: String) {
+    func addExercise(to workoutID: UUID, name: String, sets: Int, reps: Int, weight: Double) {
         guard let index = index(of: workoutID) else { return }
         let exercise = Exercise(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            details: details.trimmingCharacters(in: .whitespacesAndNewlines)
+            sets: sets,
+            reps: reps,
+            weight: weight
         )
         workouts[index].exercises.append(exercise)
     }
@@ -51,12 +55,18 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
-    func toggleExercise(_ exerciseID: UUID, in workoutID: UUID) {
+    func toggleSet(_ setIndex: Int, for exerciseID: UUID, in workoutID: UUID) {
         guard let workoutIndex = index(of: workoutID),
               let exerciseIndex = workouts[workoutIndex].exercises.firstIndex(where: { $0.id == exerciseID })
         else { return }
 
-        workouts[workoutIndex].exercises[exerciseIndex].isComplete.toggle()
+        guard setIndex >= 0, setIndex < workouts[workoutIndex].exercises[exerciseIndex].sets else { return }
+
+        if workouts[workoutIndex].exercises[exerciseIndex].completedSets.contains(setIndex) {
+            workouts[workoutIndex].exercises[exerciseIndex].completedSets.remove(setIndex)
+        } else {
+            workouts[workoutIndex].exercises[exerciseIndex].completedSets.insert(setIndex)
+        }
         if workouts[workoutIndex].isComplete {
             workouts[workoutIndex].lastCompletedAt = .now
         } else {
@@ -67,7 +77,7 @@ final class WorkoutStore: ObservableObject {
     func reset(_ workoutID: UUID) {
         guard let index = index(of: workoutID) else { return }
         for exerciseIndex in workouts[index].exercises.indices {
-            workouts[index].exercises[exerciseIndex].isComplete = false
+            workouts[index].exercises[exerciseIndex].completedSets.removeAll()
         }
         workouts[index].lastCompletedAt = nil
     }
@@ -84,10 +94,28 @@ final class WorkoutStore: ObservableObject {
             return
         }
         workouts = decoded
+        normalizeWorkoutNames()
     }
 
     private func save() {
         guard !isLoading, let data = try? JSONEncoder().encode(workouts) else { return }
         try? data.write(to: saveURL, options: .atomic)
+    }
+
+    private func normalizeWorkoutNames() {
+        for index in workouts.indices {
+            workouts[index].name = "Workout \(Self.letterLabel(for: index))"
+        }
+    }
+
+    private static func letterLabel(for index: Int) -> String {
+        var number = index + 1
+        var label = ""
+        while number > 0 {
+            number -= 1
+            label.insert(Character(UnicodeScalar(65 + number % 26)!), at: label.startIndex)
+            number /= 26
+        }
+        return label
     }
 }
