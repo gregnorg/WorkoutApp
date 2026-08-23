@@ -14,6 +14,7 @@
 		A10000000000000000000005 /* WorkoutDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* WorkoutDetailView.swift */; };
 		A10000000000000000000007 /* NewExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* NewExerciseView.swift */; };
 		A10000000000000000000008 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* Assets.xcassets */; };
+		A10000000000000000000010 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* HistoryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +26,7 @@
 		B10000000000000000000007 /* NewExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewExerciseView.swift; sourceTree = "<group>"; };
 		B10000000000000000000008 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B10000000000000000000009 /* GymForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GymForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000010 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +57,7 @@
 				B10000000000000000000004 /* WorkoutListView.swift */,
 				B10000000000000000000005 /* WorkoutDetailView.swift */,
 				B10000000000000000000007 /* NewExerciseView.swift */,
+				B10000000000000000000010 /* HistoryView.swift */,
 				B10000000000000000000008 /* Assets.xcassets */,
 			);
 			path = WorkoutChecklist;
@@ -143,6 +146,7 @@
 				A10000000000000000000004 /* WorkoutListView.swift in Sources */,
 				A10000000000000000000005 /* WorkoutDetailView.swift in Sources */,
 				A10000000000000000000007 /* NewExerciseView.swift in Sources */,
+				A10000000000000000000010 /* HistoryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -105,6 +105,37 @@ struct Workout: Identifiable, Codable, Hashable {
     }
 }
 
+struct WorkoutHistoryEntry: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var workoutID: UUID
+    var workoutName: String
+    var completedAt: Date
+    var exercises: [ExerciseHistoryEntry]
+
+    var completedSetCount: Int {
+        exercises.reduce(0) { $0 + $1.completedSets }
+    }
+
+    var totalSetCount: Int {
+        exercises.reduce(0) { $0 + $1.sets }
+    }
+}
+
+struct ExerciseHistoryEntry: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var name: String
+    var sets: Int
+    var reps: Int
+    var weight: Double
+    var completedSets: Int
+
+    var weightLabel: String {
+        weight > 0
+            ? "\(weight.formatted(.number.precision(.fractionLength(0...1)))) lb"
+            : "Bodyweight"
+    }
+}
+
 enum AppTheme {
     static let accent = Color(red: 0.95, green: 0.30, blue: 0.20)
     static let background = Color(uiColor: .systemGroupedBackground)
@@ -112,6 +143,14 @@ enum AppTheme {
 }
 
 extension Workout {
+    var completedSetCount: Int {
+        exercises.reduce(0) { $0 + $1.completedSets.count }
+    }
+
+    var totalSetCount: Int {
+        exercises.reduce(0) { $0 + $1.sets }
+    }
+
     static let samples: [Workout] = [
         Workout(
             name: "Workout A",

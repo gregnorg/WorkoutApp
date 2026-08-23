@@ -5,15 +5,21 @@ final class WorkoutStore: ObservableObject {
     @Published private(set) var workouts: [Workout] = [] {
         didSet { save() }
     }
+    @Published private(set) var history: [WorkoutHistoryEntry] = [] {
+        didSet { saveHistory() }
+    }
 
     private let saveURL: URL
+    private let historyURL: URL
     private var isLoading = true
 
     init(fileManager: FileManager = .default) {
         let directory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
             ?? fileManager.temporaryDirectory
         saveURL = directory.appendingPathComponent("workouts.json")
+        historyURL = directory.appendingPathComponent("workout-history.json")
         load()
+        loadHistory()
         isLoading = false
     }
 
@@ -106,6 +112,33 @@ final class WorkoutStore: ObservableObject {
         workouts[index].lastCompletedAt = nil
     }
 
+    func finishAndRecord(_ workoutID: UUID) {
+        guard let index = index(of: workoutID) else { return }
+        let workout = workouts[index]
+        let entry = WorkoutHistoryEntry(
+            workoutID: workout.id,
+            workoutName: workout.name,
+            completedAt: .now,
+            exercises: workout.exercises.map { exercise in
+                ExerciseHistoryEntry(
+                    name: exercise.name,
+                    sets: exercise.sets,
+                    reps: exercise.reps,
+                    weight: exercise.weight,
+                    completedSets: exercise.completedSets.count
+                )
+            }
+        )
+        history.insert(entry, at: 0)
+        reset(workoutID)
+    }
+
+    func deleteHistory(at offsets: IndexSet) {
+        for offset in offsets.sorted(by: >) {
+            history.remove(at: offset)
+        }
+    }
+
     private func index(of workoutID: UUID) -> Int? {
         workouts.firstIndex(where: { $0.id == workoutID })
     }
@@ -128,9 +161,21 @@ final class WorkoutStore: ObservableObject {
         workouts = decoded
     }
 
+    private func loadHistory() {
+        guard let data = try? Data(contentsOf: historyURL),
+              let decoded = try? JSONDecoder().decode([WorkoutHistoryEntry].self, from: data)
+        else { return }
+        history = decoded.sorted { $0.completedAt > $1.completedAt }
+    }
+
     private func save() {
         guard !isLoading, let data = try? JSONEncoder().encode(workouts) else { return }
         try? data.write(to: saveURL, options: .atomic)
+    }
+
+    private func saveHistory() {
+        guard !isLoading, let data = try? JSONEncoder().encode(history) else { return }
+        try? data.write(to: historyURL, options: .atomic)
     }
 
     private func nextAvailableWorkoutIndex() -> Int {

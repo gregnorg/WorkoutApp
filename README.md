@@ -7,6 +7,7 @@ A small, local-first iPhone workout checklist built with SwiftUI.
 - Create sequential Workout A, B, C routines with one tap
 - Add exercises with sets, reps, and weight
 - Check off exercises during a workout
+- Finish and record workout sessions in a persistent history
 - View progress for each routine
 - Reset a routine for the next session
 - Save everything locally on the device

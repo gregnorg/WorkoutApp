@@ -3,6 +3,7 @@ import SwiftUI
 struct WorkoutListView: View {
     @EnvironmentObject private var store: WorkoutStore
     @State private var isEditing = false
+    @State private var showingHistory = false
 
     var body: some View {
         NavigationStack {
@@ -46,6 +47,11 @@ struct WorkoutListView: View {
             .navigationTitle("GymForge")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { showingHistory = true } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
+                    .accessibilityLabel("Workout history")
+
                     Button(isEditing ? "Done" : "Edit") {
                         withAnimation(.snappy) { isEditing.toggle() }
                     }
@@ -61,6 +67,9 @@ struct WorkoutListView: View {
             }
             .navigationDestination(for: UUID.self) { workoutID in
                 WorkoutDetailView(workoutID: workoutID)
+            }
+            .sheet(isPresented: $showingHistory) {
+                HistoryView()
             }
             .environment(\.editMode, .constant(isEditing ? .active : .inactive))
         }

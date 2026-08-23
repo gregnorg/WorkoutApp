@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WorkoutDetailView: View {
     @EnvironmentObject private var store: WorkoutStore
+    @Environment(\.dismiss) private var dismiss
     let workoutID: UUID
     @State private var showingNewExercise = false
     @State private var editingExercise: Exercise?
@@ -109,6 +110,17 @@ struct WorkoutDetailView: View {
             ProgressView(value: workout.progress)
                 .tint(workout.tint)
                 .scaleEffect(x: 1, y: 1.8)
+
+            Button {
+                store.finishAndRecord(workoutID)
+                dismiss()
+            } label: {
+                Label("Finish and Record", systemImage: "checkmark.seal.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(workout.tint)
+            .disabled(workout.exercises.isEmpty)
         }
         .padding(20)
         .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
