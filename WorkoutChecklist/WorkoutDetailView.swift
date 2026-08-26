@@ -17,12 +17,17 @@ struct WorkoutDetailView: View {
         Group {
             if let workout {
                 List {
-                    Section {
-                        progressHeader(workout)
-                            .listRowInsets(EdgeInsets())
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .padding(.vertical, 6)
+                    if isEditing {
+                        Section("Workout Name") {
+                            TextField(
+                                "Workout name",
+                                text: Binding(
+                                    get: { workout.name },
+                                    set: { store.renameWorkout(workoutID, to: $0) }
+                                )
+                            )
+                            .textInputAutocapitalization(.words)
+                        }
                     }
 
                     Section("Exercises") {
@@ -61,6 +66,22 @@ struct WorkoutDetailView: View {
                 .scrollContentBackground(.hidden)
                 .background(AppTheme.background)
                 .navigationTitle(workout.name)
+                .safeAreaInset(edge: .bottom) {
+                    Button {
+                        store.finishAndRecord(workoutID)
+                        dismiss()
+                    } label: {
+                        Label("Finish and Record", systemImage: "checkmark.seal.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .tint(workout.tint)
+                    .disabled(workout.exercises.isEmpty)
+                    .padding(.horizontal)
+                    .padding(.vertical, 10)
+                    .background(.bar)
+                }
                 .toolbar {
                     ToolbarItemGroup(placement: .topBarTrailing) {
                         Button { showingResetConfirmation = true } label: {
@@ -90,40 +111,6 @@ struct WorkoutDetailView: View {
                 ContentUnavailableView("Workout not found", systemImage: "exclamationmark.triangle")
             }
         }
-    }
-
-    private func progressHeader(_ workout: Workout) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(workout.isComplete ? "Workout complete!" : "Today's progress")
-                        .font(.title2.bold())
-                    Text(workout.focus.isEmpty ? "One exercise at a time." : workout.focus)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text("\(Int(workout.progress * 100))%")
-                    .font(.title2.bold().monospacedDigit())
-                    .foregroundStyle(workout.tint)
-            }
-            ProgressView(value: workout.progress)
-                .tint(workout.tint)
-                .scaleEffect(x: 1, y: 1.8)
-
-            Button {
-                store.finishAndRecord(workoutID)
-                dismiss()
-            } label: {
-                Label("Finish and Record", systemImage: "checkmark.seal.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(workout.tint)
-            .disabled(workout.exercises.isEmpty)
-        }
-        .padding(20)
-        .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 

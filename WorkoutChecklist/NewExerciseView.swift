@@ -31,15 +31,37 @@ struct NewExerciseView: View {
                     Stepper("Sets: \(sets)", value: $sets, in: 1...20)
                     Stepper("Reps per set: \(reps)", value: $reps, in: 1...100)
 
-                    HStack {
+                    VStack(alignment: .leading, spacing: 10) {
                         Text("Weight")
-                        Spacer()
-                        TextField("0", value: $weight, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 90)
-                        Text("lb")
-                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 12) {
+                            Button {
+                                weight = max(0, weight - 5)
+                            } label: {
+                                Label("Decrease 5 lb", systemImage: "minus")
+                                    .labelStyle(.iconOnly)
+                                    .frame(width: 34, height: 34)
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(weight <= 0)
+
+                            TextField("0", value: $weight, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                                .textFieldStyle(.roundedBorder)
+                            Text("lb")
+                                .foregroundStyle(.secondary)
+
+                            Button {
+                                weight += 5
+                            } label: {
+                                Label("Increase 5 lb", systemImage: "plus")
+                                    .labelStyle(.iconOnly)
+                                    .frame(width: 34, height: 34)
+                            }
+                            .buttonStyle(.bordered)
+                        }
                     }
                 } header: {
                     Text("Training")
