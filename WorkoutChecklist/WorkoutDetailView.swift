@@ -143,18 +143,27 @@ struct WorkoutDetailView: View {
 }
 
 private struct ConfettiView: View {
-    private let startTime = Date()
+    private let startTime: Date
+    private let particles: [ConfettiParticle]
     private let colors: [Color] = [
         .yellow, .pink, .cyan, .green, .orange, .purple, .white, .yellow, .mint, .white
     ]
+
+    init() {
+        var generator = SystemRandomNumberGenerator()
+        startTime = Date()
+        particles = (0..<180).map {
+            ConfettiParticle.random(id: $0, using: &generator)
+        }
+    }
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
             let elapsed = timeline.date.timeIntervalSince(startTime)
 
             Canvas(opaque: false, rendersAsynchronously: true) { context, size in
-                for index in 0..<150 {
-                    drawParticle(index, elapsed: elapsed, size: size, context: context)
+                for particle in particles {
+                    drawParticle(particle, elapsed: elapsed, size: size, context: context)
                 }
             }
         }
@@ -163,32 +172,31 @@ private struct ConfettiView: View {
     }
 
     private func drawParticle(
-        _ index: Int,
+        _ particle: ConfettiParticle,
         elapsed: TimeInterval,
         size: CGSize,
         context: GraphicsContext
     ) {
-        let delay = fraction(index, salt: 47) * 0.16
-        let age = elapsed - delay
-        let lifetime = 1.85 + fraction(index, salt: 61) * 0.55
-        guard age >= 0, age <= lifetime else { return }
+        let age = elapsed - particle.delay
+        guard age >= 0, age <= particle.lifetime else { return }
 
         let width = Double(size.width)
         let height = Double(size.height)
-        let launchX = width / 2 + (fraction(index, salt: 13) - 0.5) * width * 0.16
-        let horizontalVelocity = (fraction(index, salt: 11) - 0.5) * width * 1.35
-        let verticalVelocity = -height * (1.18 + fraction(index, salt: 73) * 0.62)
-        let gravity = height * (1.15 + fraction(index, salt: 31) * 0.25)
-        let flutter = sin(age * (7 + fraction(index, salt: 19) * 9) + Double(index)) * 7
+        let launchX = width / 2 + particle.launchOffset * width
+        let launchSpeed = particle.speed * height
+        let horizontalVelocity = sin(particle.direction) * launchSpeed
+        let verticalVelocity = -cos(particle.direction) * launchSpeed
+        let gravity = particle.gravity * height
+        let flutter = sin(age * particle.flutterFrequency + particle.flutterPhase)
+            * particle.flutterAmplitude
 
         let x = launchX + horizontalVelocity * age + flutter
         let y = height + 12 + verticalVelocity * age + 0.5 * gravity * age * age
-        let fadeStart = lifetime * 0.62
-        let opacity = age < fadeStart ? 1 : max(0, (lifetime - age) / (lifetime - fadeStart))
-        let direction = index.isMultiple(of: 2) ? 1.0 : -1.0
-        let rotation = age * (5 + fraction(index, salt: 89) * 12) * direction
-        let particleWidth = 4 + fraction(index, salt: 5) * 6
-        let particleHeight = 6 + fraction(index, salt: 7) * 9
+        let fadeStart = particle.lifetime * 0.62
+        let opacity = age < fadeStart
+            ? 1
+            : max(0, (particle.lifetime - age) / (particle.lifetime - fadeStart))
+        let rotation = age * particle.spin
 
         var particleContext = context
         particleContext.opacity = opacity
@@ -196,18 +204,54 @@ private struct ConfettiView: View {
         particleContext.rotate(by: .radians(rotation))
 
         let rectangle = CGRect(
-            x: -particleWidth / 2,
-            y: -particleHeight / 2,
-            width: particleWidth,
-            height: particleHeight
+            x: -particle.width / 2,
+            y: -particle.height / 2,
+            width: particle.width,
+            height: particle.height
         )
         let path = Path(roundedRect: rectangle, cornerRadius: 1)
         particleContext.stroke(path, with: .color(.black.opacity(0.2)), lineWidth: 0.6)
-        particleContext.fill(path, with: .color(colors[index % colors.count]))
+        particleContext.fill(path, with: .color(colors[particle.colorIndex % colors.count]))
     }
+}
 
-    private func fraction(_ index: Int, salt: Int) -> Double {
-        Double((index * 37 + salt * 17) % 101) / 100
+private struct ConfettiParticle {
+    let id: Int
+    let direction: Double
+    let speed: Double
+    let gravity: Double
+    let launchOffset: Double
+    let delay: Double
+    let lifetime: Double
+    let flutterAmplitude: Double
+    let flutterFrequency: Double
+    let flutterPhase: Double
+    let spin: Double
+    let width: Double
+    let height: Double
+    let colorIndex: Int
+
+    static func random<R: RandomNumberGenerator>(
+        id: Int,
+        using generator: inout R
+    ) -> ConfettiParticle {
+        let spinDirection = Bool.random(using: &generator) ? 1.0 : -1.0
+        return ConfettiParticle(
+            id: id,
+            direction: Double.random(in: -1.2...1.2, using: &generator),
+            speed: Double.random(in: 1.05...1.9, using: &generator),
+            gravity: Double.random(in: 1.0...1.55, using: &generator),
+            launchOffset: Double.random(in: -0.08...0.08, using: &generator),
+            delay: Double.random(in: 0...0.18, using: &generator),
+            lifetime: Double.random(in: 1.85...2.4, using: &generator),
+            flutterAmplitude: Double.random(in: 2...11, using: &generator),
+            flutterFrequency: Double.random(in: 6...18, using: &generator),
+            flutterPhase: Double.random(in: 0...(2 * Double.pi), using: &generator),
+            spin: Double.random(in: 5...18, using: &generator) * spinDirection,
+            width: Double.random(in: 4...10, using: &generator),
+            height: Double.random(in: 6...15, using: &generator),
+            colorIndex: Int.random(in: 0..<10, using: &generator)
+        )
     }
 }
 
