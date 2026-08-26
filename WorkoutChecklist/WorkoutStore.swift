@@ -115,6 +115,7 @@ final class WorkoutStore: ObservableObject {
     func finishAndRecord(_ workoutID: UUID) {
         guard let index = index(of: workoutID) else { return }
         let workout = workouts[index]
+        guard workout.completedSetCount > 0 else { return }
         let entry = WorkoutHistoryEntry(
             workoutID: workout.id,
             workoutName: workout.name,
@@ -165,7 +166,9 @@ final class WorkoutStore: ObservableObject {
         guard let data = try? Data(contentsOf: historyURL),
               let decoded = try? JSONDecoder().decode([WorkoutHistoryEntry].self, from: data)
         else { return }
-        history = decoded.sorted { $0.completedAt > $1.completedAt }
+        history = decoded
+            .filter { $0.completedSetCount > 0 }
+            .sorted { $0.completedAt > $1.completedAt }
     }
 
     private func save() {

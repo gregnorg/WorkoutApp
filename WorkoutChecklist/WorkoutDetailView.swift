@@ -74,7 +74,7 @@ struct WorkoutDetailView: View {
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
                         .tint(workout.tint)
-                        .disabled(workout.exercises.isEmpty || showingConfetti)
+                        .disabled(workout.completedSetCount == 0 || showingConfetti)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -95,7 +95,7 @@ struct WorkoutDetailView: View {
                         Button { showingResetConfirmation = true } label: {
                             Image(systemName: "arrow.counterclockwise")
                         }
-                        .disabled(workout.completedCount == 0)
+                        .disabled(workout.completedSetCount == 0)
                         .accessibilityLabel("Reset workout")
 
                         Button(isEditing ? "Done" : "Edit") {
