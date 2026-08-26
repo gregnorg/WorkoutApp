@@ -134,7 +134,7 @@ struct WorkoutDetailView: View {
     private func celebrateAndFinish() {
         showingConfetti = true
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 2_200_000_000)
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
             guard showingConfetti else { return }
             store.finishAndRecord(workoutID)
             dismiss()
@@ -143,102 +143,71 @@ struct WorkoutDetailView: View {
 }
 
 private struct ConfettiView: View {
-    @State private var isAnimating = false
-    private let colors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .pink]
+    private let startTime = Date()
+    private let colors: [Color] = [
+        .yellow, .pink, .cyan, .green, .orange, .purple, .white, .yellow, .mint, .white
+    ]
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                ForEach(0..<100, id: \.self) { index in
-                    ConfettiPiece(
-                        index: index,
-                        color: colors[index % colors.count],
-                        containerSize: geometry.size,
-                        isAnimating: isAnimating
-                    )
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+            let elapsed = timeline.date.timeIntervalSince(startTime)
+
+            Canvas(opaque: false, rendersAsynchronously: true) { context, size in
+                for index in 0..<150 {
+                    drawParticle(index, elapsed: elapsed, size: size, context: context)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .ignoresSafeArea()
-        .onAppear {
-            DispatchQueue.main.async { isAnimating = true }
-        }
         .accessibilityHidden(true)
     }
-}
 
-private struct ConfettiPiece: View {
-    let index: Int
-    let color: Color
-    let containerSize: CGSize
-    let isAnimating: Bool
+    private func drawParticle(
+        _ index: Int,
+        elapsed: TimeInterval,
+        size: CGSize,
+        context: GraphicsContext
+    ) {
+        let delay = fraction(index, salt: 47) * 0.16
+        let age = elapsed - delay
+        let lifetime = 1.85 + fraction(index, salt: 61) * 0.55
+        guard age >= 0, age <= lifetime else { return }
 
-    var body: some View {
-        RoundedRectangle(cornerRadius: 1.5)
-            .fill(color)
-            .frame(
-                width: 7 + fraction(salt: 5) * 4,
-                height: 10 + fraction(salt: 7) * 7
-            )
-            .position(
-                x: containerSize.width / 2 + (fraction(salt: 13) - 0.5) * 70,
-                y: containerSize.height + 15
-            )
-            .modifier(
-                BurstMotion(
-                    progress: isAnimating ? 1 : 0,
-                    horizontalDistance: horizontalDistance,
-                    arcHeight: arcHeight
-                )
-            )
-            .rotationEffect(.degrees(isAnimating ? rotation : 0))
-            .rotation3DEffect(
-                .degrees(isAnimating ? 900 : 0),
-                axis: (x: 1, y: fraction(salt: 29), z: 0)
-            )
-            .animation(
-                .linear(duration: 1.85)
-                    .delay(Double(fraction(salt: 47)) * 0.18),
-                value: isAnimating
-            )
-    }
+        let width = Double(size.width)
+        let height = Double(size.height)
+        let launchX = width / 2 + (fraction(index, salt: 13) - 0.5) * width * 0.16
+        let horizontalVelocity = (fraction(index, salt: 11) - 0.5) * width * 1.35
+        let verticalVelocity = -height * (1.18 + fraction(index, salt: 73) * 0.62)
+        let gravity = height * (1.15 + fraction(index, salt: 31) * 0.25)
+        let flutter = sin(age * (7 + fraction(index, salt: 19) * 9) + Double(index)) * 7
 
-    private var horizontalDistance: CGFloat {
-        (fraction(salt: 11) - 0.5) * containerSize.width * 1.9
-    }
+        let x = launchX + horizontalVelocity * age + flutter
+        let y = height + 12 + verticalVelocity * age + 0.5 * gravity * age * age
+        let fadeStart = lifetime * 0.62
+        let opacity = age < fadeStart ? 1 : max(0, (lifetime - age) / (lifetime - fadeStart))
+        let direction = index.isMultiple(of: 2) ? 1.0 : -1.0
+        let rotation = age * (5 + fraction(index, salt: 89) * 12) * direction
+        let particleWidth = 4 + fraction(index, salt: 5) * 6
+        let particleHeight = 6 + fraction(index, salt: 7) * 9
 
-    private var arcHeight: CGFloat {
-        containerSize.height * (0.58 + fraction(salt: 73) * 0.42)
-    }
+        var particleContext = context
+        particleContext.opacity = opacity
+        particleContext.translateBy(x: x, y: y)
+        particleContext.rotate(by: .radians(rotation))
 
-    private var rotation: Double {
-        Double(360 + fraction(salt: 89) * 720)
-    }
-
-    private func fraction(salt: Int) -> CGFloat {
-        CGFloat((index * 37 + salt * 17) % 101) / 100
-    }
-}
-
-private struct BurstMotion: GeometryEffect {
-    var progress: CGFloat
-    let horizontalDistance: CGFloat
-    let arcHeight: CGFloat
-
-    var animatableData: CGFloat {
-        get { progress }
-        set { progress = newValue }
-    }
-
-    func effectValue(size: CGSize) -> ProjectionTransform {
-        let verticalDistance = -arcHeight * 4 * progress * (1 - progress)
-        return ProjectionTransform(
-            CGAffineTransform(
-                translationX: horizontalDistance * progress,
-                y: verticalDistance
-            )
+        let rectangle = CGRect(
+            x: -particleWidth / 2,
+            y: -particleHeight / 2,
+            width: particleWidth,
+            height: particleHeight
         )
+        let path = Path(roundedRect: rectangle, cornerRadius: 1)
+        particleContext.stroke(path, with: .color(.black.opacity(0.2)), lineWidth: 0.6)
+        particleContext.fill(path, with: .color(colors[index % colors.count]))
+    }
+
+    private func fraction(_ index: Int, salt: Int) -> Double {
+        Double((index * 37 + salt * 17) % 101) / 100
     }
 }
 
