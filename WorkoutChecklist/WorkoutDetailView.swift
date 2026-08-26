@@ -54,7 +54,9 @@ struct WorkoutDetailView: View {
                                 )
                             }
                             .onDelete { store.deleteExercises(at: $0, from: workoutID) }
+                            .onMove { store.moveExercises(from: $0, to: $1, in: workoutID) }
                             .deleteDisabled(!isEditing)
+                            .moveDisabled(!isEditing)
                         }
 
                         if isEditing {

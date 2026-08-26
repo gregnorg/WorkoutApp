@@ -89,6 +89,19 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
+    func moveExercises(from offsets: IndexSet, to destination: Int, in workoutID: UUID) {
+        guard let index = index(of: workoutID) else { return }
+        var exercises = workouts[index].exercises
+        let movingExercises = offsets.sorted().map { exercises[$0] }
+        for offset in offsets.sorted(by: >) {
+            exercises.remove(at: offset)
+        }
+        let removedBeforeDestination = offsets.filter { $0 < destination }.count
+        let insertionIndex = max(0, min(exercises.count, destination - removedBeforeDestination))
+        exercises.insert(contentsOf: movingExercises, at: insertionIndex)
+        workouts[index].exercises = exercises
+    }
+
     func toggleSet(_ setIndex: Int, for exerciseID: UUID, in workoutID: UUID) {
         guard let workoutIndex = index(of: workoutID),
               let exerciseIndex = workouts[workoutIndex].exercises.firstIndex(where: { $0.id == exerciseID })
