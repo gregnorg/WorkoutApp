@@ -238,7 +238,7 @@ private struct ConfettiParticle {
         let spinDirection = Bool.random(using: &generator) ? 1.0 : -1.0
         return ConfettiParticle(
             id: id,
-            direction: Double.random(in: -1.2...1.2, using: &generator),
+            direction: Double.random(in: -0.6...0.6, using: &generator),
             speed: Double.random(in: 1.05...1.9, using: &generator),
             gravity: Double.random(in: 1.0...1.55, using: &generator),
             launchOffset: Double.random(in: -0.08...0.08, using: &generator),
