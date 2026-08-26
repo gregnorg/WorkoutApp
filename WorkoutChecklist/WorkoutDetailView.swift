@@ -7,6 +7,8 @@ struct WorkoutDetailView: View {
     @State private var showingNewExercise = false
     @State private var editingExercise: Exercise?
     @State private var showingResetConfirmation = false
+    @State private var showingFinishConfirmation = false
+    @State private var showingConfetti = false
     @State private var isEditing = false
 
     private var workout: Workout? {
@@ -61,26 +63,32 @@ struct WorkoutDetailView: View {
                             }
                         }
                     }
+
+                    Section {
+                        Button {
+                            showingFinishConfirmation = true
+                        } label: {
+                            Label("Finish and Record", systemImage: "checkmark.seal.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .tint(workout.tint)
+                        .disabled(workout.exercises.isEmpty || showingConfetti)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
                 }
                 .listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
                 .background(AppTheme.background)
                 .navigationTitle(workout.name)
-                .safeAreaInset(edge: .bottom) {
-                    Button {
-                        store.finishAndRecord(workoutID)
-                        dismiss()
-                    } label: {
-                        Label("Finish and Record", systemImage: "checkmark.seal.fill")
-                            .frame(maxWidth: .infinity)
+                .overlay {
+                    if showingConfetti {
+                        ConfettiView()
+                            .allowsHitTesting(false)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .tint(workout.tint)
-                    .disabled(workout.exercises.isEmpty)
-                    .padding(.horizontal)
-                    .padding(.vertical, 10)
-                    .background(.bar)
                 }
                 .toolbar {
                     ToolbarItemGroup(placement: .topBarTrailing) {
@@ -100,6 +108,16 @@ struct WorkoutDetailView: View {
                 } message: {
                     Text("Every exercise will be marked incomplete.")
                 }
+                .confirmationDialog(
+                    "Finish and record this workout?",
+                    isPresented: $showingFinishConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("Finish and Record") { celebrateAndFinish() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This workout will be added to Workout History, then its checkmarks will reset.")
+                }
                 .sheet(isPresented: $showingNewExercise) {
                     NewExerciseView(workoutID: workoutID)
                 }
@@ -111,6 +129,70 @@ struct WorkoutDetailView: View {
                 ContentUnavailableView("Workout not found", systemImage: "exclamationmark.triangle")
             }
         }
+    }
+
+    private func celebrateAndFinish() {
+        showingConfetti = true
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            guard showingConfetti else { return }
+            store.finishAndRecord(workoutID)
+            dismiss()
+        }
+    }
+}
+
+private struct ConfettiView: View {
+    @State private var isAnimating = false
+    private let colors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .pink]
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                ForEach(0..<70, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(colors[index % colors.count])
+                        .frame(width: 8, height: 13)
+                        .position(x: geometry.size.width / 2, y: -15)
+                        .offset(
+                            x: isAnimating ? horizontalOffset(for: index, width: geometry.size.width) : 0,
+                            y: isAnimating ? verticalOffset(for: index, height: geometry.size.height) : 0
+                        )
+                        .rotationEffect(.degrees(isAnimating ? rotation(for: index) : 0))
+                        .rotation3DEffect(
+                            .degrees(isAnimating ? 720 : 0),
+                            axis: (x: 1, y: fraction(for: index, salt: 29), z: 0)
+                        )
+                        .animation(
+                            .timingCurve(0.15, 0.7, 0.3, 1, duration: 1.35)
+                                .delay(Double(fraction(for: index, salt: 47)) * 0.2),
+                            value: isAnimating
+                        )
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            DispatchQueue.main.async { isAnimating = true }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func horizontalOffset(for index: Int, width: CGFloat) -> CGFloat {
+        (fraction(for: index, salt: 11) - 0.5) * width * 1.8
+    }
+
+    private func verticalOffset(for index: Int, height: CGFloat) -> CGFloat {
+        height * (0.82 + fraction(for: index, salt: 73) * 0.3)
+    }
+
+    private func rotation(for index: Int) -> Double {
+        Double(360 + fraction(for: index, salt: 89) * 720)
+    }
+
+    private func fraction(for index: Int, salt: Int) -> CGFloat {
+        CGFloat((index * 37 + salt * 17) % 101) / 100
     }
 }
 
